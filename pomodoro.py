@@ -1,5 +1,35 @@
 import sys, time, wave, pyaudio
 
+class TaskTimer():
+	def __init__(self, task_time):
+		if not isinstance(task_time, dict):
+			raise Exception(
+				"""
+				time must be a dict containing at least one of the following
+				keys: 'hours', 'minutes' or 'seconds'.
+				"""
+			)
+
+		self.seconds_duration = \
+			task_time["seconds"] +\
+			task_time["minutes"] * 60 +\
+			task_time["hours"] * 60 * 60
+
+		self.start_time = time.time()
+		self.end_time = self.start_time + self.seconds_duration
+
+	def seconds_left(self):
+		return self.end_time - time.time()
+
+	def minutes_left(self):
+		return self.seconds_left() / 60
+
+	def hours_left(self):
+		return self.minutes_left() / 60
+
+	def is_done(self):
+		return self.seconds_left() <= 0
+
 class TaskInfoWriter():
 	def __init__(self):
 		pass
@@ -32,7 +62,8 @@ class SoundPlayer():
 			channels = self.sound_file.getnchannels(),
 			rate = self.sound_file.getframerate(),
 			output = True,
-			stream_callback=self.get_next_frame
+			stream_callback=self.get_next_frame,
+			start=False
 		)
 
 	def get_next_frame(self, in_data, frame_count, time_info, status):
@@ -68,7 +99,25 @@ class SoundPlayer():
 
 if __name__ == "__main__":
 	s = SoundPlayer("./time.wav")
-	TaskInfoWriter.start_task(" ".join(sys.argv[1:]))
+
+	title = input("What is the name of this task?\n")
+	TaskInfoWriter.start_task(title)
+
+	string_time = input(
+		"How long do you want to spend on this task?\n[Hours:Minutes:seconds]\n"
+	)
+	array_time = list(map(float, string_time.split(":")))
+	dict_time = {
+		"hours": array_time[0],
+		"minutes": array_time[1],
+		"seconds": array_time[2]
+	}
+	t = TaskTimer(dict_time)
+
+	while not t.is_done():
+		time.sleep(0.1)
+
+	# TaskInfoWriter.start_task(" ".join(sys.argv[1:]))
 
 	s.play_sound(blocking=True)
 
