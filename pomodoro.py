@@ -34,7 +34,7 @@ class TaskInfoWriter():
 	def __init__(self):
 		pass
 
-	def start_task(name=None):
+	def start_task(self, name=None):
 		if name == None:
 			raise Exception("You must give the task a name.")
 
@@ -45,6 +45,9 @@ class TaskInfoWriter():
 		task_title = "## {} - {}".format(current_time, name)
 		print(file_title)
 		print(task_title)
+
+	def write_notes(self, notes):
+		print(notes)
 
 class SoundPlayer():
 	def __init__(self, sound_file):
@@ -101,12 +104,12 @@ if __name__ == "__main__":
 	s = SoundPlayer("./time.wav")
 
 	title = input("What is the name of this task?\n")
-	TaskInfoWriter.start_task(title)
+	writer = TaskInfoWriter()
 
 	string_time = input(
 		"How long do you want to spend on this task?\n[Hours:Minutes:seconds]\n"
 	)
-	array_time = list(map(float, string_time.split(":")))
+	array_time = list(map(float, string_time.split(":"))) # this still needs proper error handling
 	dict_time = {
 		"hours": array_time[0],
 		"minutes": array_time[1],
@@ -120,5 +123,24 @@ if __name__ == "__main__":
 	# TaskInfoWriter.start_task(" ".join(sys.argv[1:]))
 
 	s.play_sound(blocking=True)
+
+	writer.start_task(title)
+
+	notes_input_message = (
+"""
+What notes do you have on the task you have just completed?
+(Press enter on an empty line when done)
+"""
+	)
+
+	notes = []
+	while True:
+		line = input(notes_input_message if len(notes) < 1 else "")
+		if line:
+			notes.append(line)
+		else:
+			break
+
+	writer.write_notes("\n".join(notes))
 
 	s.close()
