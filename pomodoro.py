@@ -1,7 +1,8 @@
-import sys, time, wave, pyaudio
+import sys, time, os, wave, pyaudio, threading
+from pathlib import Path
 
 class TaskTimer():
-	def __init__(self, task_time):
+	def __init__(self, task_time, callback=lambda: None):
 		if not isinstance(task_time, dict):
 			raise Exception(
 				"""
@@ -18,6 +19,10 @@ class TaskTimer():
 		self.start_time = time.time()
 		self.end_time = self.start_time + self.seconds_duration
 
+		self.callback = callback
+
+		threading.Thread(target=self.watch_timer).start()
+
 	def seconds_left(self):
 		return self.end_time - time.time()
 
@@ -30,6 +35,15 @@ class TaskTimer():
 	def is_done(self):
 		return self.seconds_left() <= 0
 
+	def set_done_callback(self, callback):
+		self.callback = callback
+
+	def watch_timer(self):
+		while not self.is_done():
+			time.sleep(1)
+
+		self.callback()
+
 class TaskInfoWriter():
 	def __init__(self):
 		pass
@@ -38,16 +52,30 @@ class TaskInfoWriter():
 		if name == None:
 			raise Exception("You must give the task a name.")
 
-		date = time.strftime("%a %d %b %Y")
-		file_title = "# {}".format(date)
+		dir_name = time.strftime("%b_%Y")
 
-		current_time = time.strftime("%H:%M")
-		task_title = "## {} - {}".format(current_time, name)
-		print(file_title)
-		print(task_title)
+		file_name = time.strftime("%a %d %b %Y")
+
+		current_time = time.strftime("# %H:%M - {}".format(name))
+
+		logs_path = Path("./logs")
+
+		if not logs_path.is_dir():
+			os.mkdir(logs_path)
+
+		dir_path = Path("./logs/{}".format(dir_name))
+		if not dir_path.is_dir():
+			os.mkdir(dir_path)
+
+		self.file_dir = "./logs/{}/{}.md".format(dir_name, file_name)
+		with open(self.file_dir, "a") as f:
+			f.write("{}\n".format(current_time))
+
 
 	def write_notes(self, notes):
-		print(notes)
+		with open(self.file_dir, "a") as f:
+			current_time = time.strftime("# %H:%M - END")
+			f.write("{}\n{}\n\n".format(notes, current_time))
 
 class SoundPlayer():
 	def __init__(self, sound_file):
@@ -103,6 +131,7 @@ class SoundPlayer():
 if __name__ == "__main__":
 	s = SoundPlayer("./time.wav")
 
+	print("===================================================================")
 	title = input("What is the name of this task?\n")
 	writer = TaskInfoWriter()
 
@@ -116,6 +145,7 @@ if __name__ == "__main__":
 		"seconds": array_time[2]
 	}
 	t = TaskTimer(dict_time)
+	# t = TaskTimer(dict_time, lambda: False)
 
 	while not t.is_done():
 		time.sleep(0.1)
@@ -126,6 +156,7 @@ if __name__ == "__main__":
 
 	writer.start_task(title)
 
+	n = TaskTimer(dict_time, s.play_sound)
 	notes_input_message = (
 """
 What notes do you have on the task you have just completed?
@@ -141,6 +172,6 @@ What notes do you have on the task you have just completed?
 		else:
 			break
 
-	writer.write_notes("\n".join(notes))
+	writer.write_notes("\n".join(notes)) # if you enter notes before callback, error occours because stream is closed
 
 	s.close()
