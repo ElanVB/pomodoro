@@ -1,4 +1,4 @@
-import tkinter as tk
+import tkinter as tk, sys
 from pomodoro import TaskTimer, SoundPlayer, TaskInfoWriter
 
 PLAY = "\N{Black Right-pointing Triangle}"
@@ -9,8 +9,12 @@ STOP = "\N{Black Medium Square}"
 NICE_STOP = "\N{Black Square For Stop}"
 
 class PomodoroGUI():
-	def __init__(self):
-		self.writer = TaskInfoWriter()
+	def __init__(self, logs_dir=None):
+		if logs_dir == None:
+			self.writer = TaskInfoWriter()
+		else:
+			self.writer = TaskInfoWriter(logs_dir)
+
 		self.sound = SoundPlayer("./time.wav")
 
 		self.root = tk.Tk()
@@ -547,4 +551,8 @@ class PomodoroGUI():
 		self.frames['break'].grid_forget()
 
 if __name__ == "__main__":
-	PomodoroGUI()
+	logs_dir = sys.argv[1]
+	if logs_dir:
+		PomodoroGUI(logs_dir)
+	else:
+		PomodoroGUI()

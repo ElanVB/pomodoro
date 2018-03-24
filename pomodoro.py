@@ -75,10 +75,12 @@ class TaskTimer():
 		self.killed = True
 
 class TaskInfoWriter():
-	def __init__(self):
-		pass
+	def __init__(self, logs_dir="./logs"):
+		dir_name = os.path.dirname(__file__)
+		logs_path = os.path.join(dir_name, logs_dir)
+		self.logs_dir = logs_path
 
-	def start_task(self, name=None, logs_dir="./logs"):
+	def start_task(self, name=None):
 		if name == None:
 			raise Exception("You must give the task a name.")
 
@@ -88,16 +90,16 @@ class TaskInfoWriter():
 
 		current_time = time.strftime("# %H:%M - {}".format(name))
 
-		logs_path = Path(logs_dir)
+		logs_path = Path(self.logs_dir)
 
 		if not logs_path.is_dir():
 			os.mkdir(logs_path)
 
-		dir_path = Path("./logs/{}".format(dir_name))
+		dir_path = Path("{}/{}".format(self.logs_dir, dir_name))
 		if not dir_path.is_dir():
 			os.mkdir(dir_path)
 
-		self.file_dir = "./logs/{}/{}.md".format(dir_name, file_name)
+		self.file_dir = "{}/{}/{}.md".format(self.logs_dir, dir_name, file_name)
 		with open(self.file_dir, "a") as f:
 			f.write("{}\n".format(current_time))
 
@@ -109,8 +111,10 @@ class TaskInfoWriter():
 
 class SoundPlayer():
 	def __init__(self, sound_file):
+		dir_name = os.path.dirname(__file__)
+		file_path = os.path.join(dir_name, sound_file)
 		# open a wav format sound file
-		self.sound_file = wave.open(sound_file, "rb")
+		self.sound_file = wave.open(file_path, "rb")
 
 		# instantiate PyAudio
 		self.audio_player = pyaudio.PyAudio()
