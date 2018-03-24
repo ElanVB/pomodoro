@@ -1,4 +1,5 @@
 import tkinter as tk
+from pomodoro import TaskTimer, SoundPlayer
 
 PLAY = "\N{Black Right-pointing Triangle}"
 PAUSE = "\N{Double Vertical Line}"
@@ -9,6 +10,8 @@ NICE_STOP = "\N{Black Square For Stop}"
 
 class PomodoroGUI():
 	def __init__(self):
+		self.sound = SoundPlayer("./time.wav")
+
 		self.root = tk.Tk()
 
 		tk.Grid.rowconfigure(self.root, 0, weight=1)
@@ -75,43 +78,97 @@ class PomodoroGUI():
 		self.root.config(menu=tk.Menu(self.root))
 
 	def start_timer(self):
-		if self.current_window == "task":
-			for entry in self.entries["task"].values():
-				entry.config(state="disabled")
-		elif self.current_window == "notes":
-			for entry in self.entries["notes"].values():
-				entry.config(state="disabled")
-		elif self.current_window == "break":
-			for entry in self.entries["break"].values():
-				entry.config(state="disabled")
+		if self.initial_timer:
+			if self.current_window == "task":
+				for entry in self.entries["task"].values():
+					entry.config(state="disabled")
 
-		self.timer = True
+				self.timer = TaskTimer({
+					"hours": self.variables["task"]["entries"]["hours"].get(),
+					"minutes": self.variables["task"]["entries"]["minutes"].get(),
+					"seconds": self.variables["task"]["entries"]["seconds"].get()
+				},
+					self.task_timer_timeout
+				)
+			elif self.current_window == "notes":
+				for entry in self.entries["notes"].values():
+					entry.config(state="disabled")
+
+				self.timer = TaskTimer({
+					"hours": self.variables["notes"]["entries"]["hours"].get(),
+					"minutes": self.variables["notes"]["entries"]["minutes"].get(),
+					"seconds": self.variables["notes"]["entries"]["seconds"].get()
+				},
+					self.notes_timer_timeout
+				)
+			elif self.current_window == "break":
+				for entry in self.entries["break"].values():
+					entry.config(state="disabled")
+
+				self.timer = TaskTimer({
+					"hours": self.variables["break"]["entries"]["hours"].get(),
+					"minutes": self.variables["break"]["entries"]["minutes"].get(),
+					"seconds": self.variables["break"]["entries"]["seconds"].get()
+				},
+					self.break_timer_timeout
+				)
+
+			self.initial_timer = False
+		else:
+			self.timer.start()
+
+		self.timer_active = True
 		self.update_timer()
 
+	def task_timer_timeout(self):
+		self.sound.play_sound()
+		self.handle_stop_button()
+
+	def notes_timer_timeout(self):
+		self.sound.play_sound()
+		self.stop_timer()
+
+	def break_timer_timeout(self):
+		self.sound.play_sound()
+		self.handle_stop_button()
+
 	def stop_timer(self):
-		self.timer = False
+		self.timer_active = False
+		self.timer.pause()
 
 	def update_timer(self):
 		# PUT THINGS HERE!
-		if self.timer:
-			self.percentage = timer.seconds_left()/timer.seconds_duration
+		if self.timer_active:
+			self.percentage = self.timer.seconds_left()/self.timer.seconds_duration
 			self.canvas.delete("all")
 
+			time_left = self.timer.dict_time_left()
+
 			if self.current_window == "task":
+				self.variables["task"]["entries"]["hours"].set(time_left["hours"])
+				self.variables["task"]["entries"]["minutes"].set(time_left["minutes"])
+				self.variables["task"]["entries"]["seconds"].set(time_left["seconds"])
 				self.draw_task_circle()
 			elif self.current_window == "notes":
+				self.variables["notes"]["entries"]["hours"].set(time_left["hours"])
+				self.variables["notes"]["entries"]["minutes"].set(time_left["minutes"])
+				self.variables["notes"]["entries"]["seconds"].set(time_left["seconds"])
 				self.draw_notes_circle()
 			elif self.current_window == "break":
+				self.variables["break"]["entries"]["hours"].set(time_left["hours"])
+				self.variables["break"]["entries"]["minutes"].set(time_left["minutes"])
+				self.variables["break"]["entries"]["seconds"].set(time_left["seconds"])
 				self.draw_break_circle()
 
-			self.root.after(100, self.update_timer)
+			self.root.after(50, self.update_timer)
 
 ################################################################################
 
 	def show_task_window(self):
 		self.current_window = "task"
-		self.timer = False
+		self.timer_active = False
 		self.percentage = 1.0
+		self.initial_timer = True
 
 		self.set_window_scales(1.0/3)
 		self.resize_window()
@@ -207,7 +264,7 @@ class PomodoroGUI():
 		self.buttons['task']['stop'] = stop_button
 
 	def handle_start_button(self, *other_arguments):
-		if self.timer == False:
+		if self.timer_active == False:
 			self.start_timer()
 			# actually start the timer here
 			# disable entries here
@@ -217,7 +274,7 @@ class PomodoroGUI():
 		# actually pause the timer here
 
 	def handle_stop_button(self, *other_arguments):
-		self.timer = True
+		self.timer_active = True
 		self.percentage = 1.0
 		self.update_timer()
 		self.stop_timer()
@@ -243,6 +300,10 @@ class PomodoroGUI():
 
 	def show_notes_window(self):
 		self.current_window = "notes"
+		self.timer_active = False
+		self.percentage = 1.0
+		self.initial_timer = True
+
 		self.set_window_scales(1.0/3)
 		self.resize_window()
 		self.root.title('Task Notes')
@@ -354,8 +415,9 @@ class PomodoroGUI():
 
 	def show_break_window(self):
 		self.current_window = "break"
-		self.timer = False
+		self.timer_active = False
 		self.percentage = 1.0
+		self.initial_timer = True
 
 		self.set_window_scales(1.0/3)
 		self.resize_window()

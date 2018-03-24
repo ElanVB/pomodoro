@@ -42,20 +42,27 @@ class TaskTimer():
 		self.callback = callback
 
 	def watch_timer(self):
+		sleep_time = 0.05
 		while not self.is_done():
-			if self.is_paused():
-				self.pause_time += time.time() - self.initial_pause_time
+			if self.is_paused:
+				self.pause_time += sleep_time
 
-			time.sleep(1)
+			time.sleep(sleep_time)
 
 		self.callback()
 
 	def pause(self):
 		self.is_paused = True
-		self.initial_pause_time = time.time()
 
 	def start(self):
 		self.is_paused = False
+
+	def dict_time_left(self):
+		return {
+			"hours": int(self.hours_left()),
+			"minutes": int(self.minutes_left() % 60),
+			"seconds": int(self.seconds_left() % 60)
+		}
 
 class TaskInfoWriter():
 	def __init__(self):
