@@ -16,6 +16,9 @@ class TaskTimer():
 			task_time["minutes"] * 60 +\
 			task_time["hours"] * 60 * 60
 
+		self.is_paused = False
+		self.pause_time = 0
+
 		self.start_time = time.time()
 		self.end_time = self.start_time + self.seconds_duration
 
@@ -24,7 +27,7 @@ class TaskTimer():
 		threading.Thread(target=self.watch_timer).start()
 
 	def seconds_left(self):
-		return self.end_time - time.time()
+		return self.end_time - time.time() + self.pause_time
 
 	def minutes_left(self):
 		return self.seconds_left() / 60
@@ -40,9 +43,19 @@ class TaskTimer():
 
 	def watch_timer(self):
 		while not self.is_done():
+			if self.is_paused():
+				self.pause_time += time.time() - self.initial_pause_time
+
 			time.sleep(1)
 
 		self.callback()
+
+	def pause(self):
+		self.is_paused = True
+		self.initial_pause_time = time.time()
+
+	def start(self):
+		self.is_paused = False
 
 class TaskInfoWriter():
 	def __init__(self):
