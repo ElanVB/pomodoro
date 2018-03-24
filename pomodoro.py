@@ -11,10 +11,12 @@ class TaskTimer():
 				"""
 			)
 
-		self.seconds_duration = \
-			task_time["seconds"] +\
-			task_time["minutes"] * 60 +\
-			task_time["hours"] * 60 * 60
+		self.seconds_duration = max(
+			task_time["seconds"] +
+			task_time["minutes"] * 60 +
+			task_time["hours"] * 60 * 60,
+			0.000000000000000000000000000000000000000000000000000000000000000001
+		)
 
 		self.is_paused = False
 		self.pause_time = 0
