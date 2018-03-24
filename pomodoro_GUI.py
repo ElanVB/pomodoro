@@ -21,13 +21,9 @@ class PomodoroGUI():
 
 		self.frames = {}
 		self.buttons = {}
-		self.labels = {}
+		self.text_areas = {}
 		self.entries = {}
 		self.variables = {}
-		self.menus = {}
-
-		self.timer = False
-		self.percentage = 1.0
 
 		self.show_task_window()
 
@@ -35,8 +31,8 @@ class PomodoroGUI():
 		self.focus()
 		self.root.mainloop()
 
-		def create_circle(self, x, y, r, **kwargs):
-			return self.canvas.create_oval(x-r, y-r, x+r, y+r, **kwargs)
+	def create_circle(self, x, y, r, **kwargs):
+		return self.canvas.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
 	def create_circle_arc(self, x, y, r, **kwargs):
 		if "start" in kwargs and "end" in kwargs:
@@ -78,7 +74,45 @@ class PomodoroGUI():
 	def clear_menu_bar(self):
 		self.root.config(menu=tk.Menu(self.root))
 
+	def start_timer(self):
+		if self.current_window == "task":
+			for entry in self.entries["task"].values():
+				entry.config(state="disabled")
+		elif self.current_window == "notes":
+			for entry in self.entries["notes"].values():
+				entry.config(state="disabled")
+		elif self.current_window == "break":
+			for entry in self.entries["break"].values():
+				entry.config(state="disabled")
+
+		self.timer = True
+		self.update_timer()
+
+	def stop_timer(self):
+		self.timer = False
+
+	def update_timer(self):
+		# PUT THINGS HERE!
+		if self.timer:
+			self.percentage = timer.seconds_left()/timer.seconds_duration
+			self.canvas.delete("all")
+
+			if self.current_window == "task":
+				self.draw_task_circle()
+			elif self.current_window == "notes":
+				self.draw_notes_circle()
+			elif self.current_window == "break":
+				self.draw_break_circle()
+
+			self.root.after(100, self.update_timer)
+
+################################################################################
+
 	def show_task_window(self):
+		self.current_window = "task"
+		self.timer = False
+		self.percentage = 1.0
+
 		self.set_window_scales(1.0/3)
 		self.resize_window()
 		self.root.title('Task Timer')
@@ -91,9 +125,8 @@ class PomodoroGUI():
 
 		self.add_task_entries()
 		self.add_task_canvas()
-		self.update_timer()
 		self.add_task_buttons()
-		self.clear_menu_bar()
+		# self.clear_menu_bar()
 
 		self.frames['task'].grid(sticky='nswe')
 
@@ -117,22 +150,7 @@ class PomodoroGUI():
 		percent = self.percentage
 		width = self.variables['task']['canvas']['width']
 		height = self.variables['task']['canvas']['height']
-		self.create_circle_arc(width/2, height/2, min(width, height)/2, fill="blue", outline="#DDD", width=4, start=90, end=(359.0 * percent)+90)
-
-	def start_timer(self):
-		timer = True
-		self.update_timer()
-
-	def stop_timer(self):
-		timer = False
-
-	def update_timer(self):
-		# PUT THINGS HERE!
-		if self.timer:
-			self.percentage -= 0.01
-			self.canvas.delete("all")
-			self.draw_task_circle()
-			self.root.after(100, self.update_timer)
+		self.create_circle_arc(width/2, height/2, min(width, height)/2, fill="red", outline="#DDD", width=4, start=90, end=(359.0 * percent)+90)
 
 	def add_task_entries(self):
 		task_frame = self.frames['task']
@@ -190,30 +208,246 @@ class PomodoroGUI():
 
 	def handle_start_button(self, *other_arguments):
 		if self.timer == False:
-			self.timer = True
-			self.update_timer()
+			self.start_timer()
 			# actually start the timer here
 			# disable entries here
 
 	def handle_pause_button(self, *other_arguments):
-		self.timer = False
+		self.stop_timer()
 		# actually pause the timer here
 
 	def handle_stop_button(self, *other_arguments):
 		self.timer = True
 		self.percentage = 1.0
 		self.update_timer()
-		self.timer = False
+		self.stop_timer()
+
+		if self.current_window == "task":
+			self.switch_task_to_notes()
+		elif self.current_window == "notes":
+			self.switch_notes_to_break()
+		elif self.current_window == "break":
+			self.switch_break_to_task()
 		# actually stop the timer here and bring notes screen up
 		# (or that will happen as a result of the timer ending)
 
-	def switch_connect_to_measure(self):
+	def switch_task_to_notes(self):
 		self.remove_task_window()
-		# self.show_measure_window()
+		self.show_notes_window()
 
 	def remove_task_window(self):
 	# def remove_task_window(self, *other_arguments):
 		self.frames['task'].grid_forget()
+
+################################################################################
+
+	def show_notes_window(self):
+		self.current_window = "notes"
+		self.set_window_scales(1.0/3)
+		self.resize_window()
+		self.root.title('Task Notes')
+
+		self.frames['notes'] = tk.Frame(self.root)
+		self.variables['notes'] = {}
+
+		self.frames['notes'].rowconfigure(3)
+		self.frames['notes'].columnconfigure(4)
+
+		self.add_notes_entries()
+		self.add_notes_canvas()
+		self.add_notes_buttons()
+		self.add_notes_text_area()
+		# self.clear_menu_bar()
+
+		self.frames['notes'].grid(sticky='nswe')
+
+		for row_index in range(3):
+			tk.Grid.rowconfigure(self.frames['notes'], row_index, weight=1)
+		for col_index in range(4):
+			tk.Grid.columnconfigure(self.frames['notes'], col_index, weight=1, minsize=self.window_dimentions['width']/4)
+
+	def add_notes_entries(self):
+		notes_frame = self.frames['notes']
+		self.entries['notes'] = {}
+		self.variables['notes']['entries'] = {}
+
+		hours = tk.IntVar()
+		self.variables['notes']['entries']['hours'] = hours
+
+		hours_entry = tk.Entry(notes_frame, textvariable=hours)
+		hours_entry.grid(row=0, column=0, columnspan=1)
+		self.entries['notes']['hours'] = hours_entry
+
+		minutes = tk.IntVar()
+		minutes.set(5)
+		self.variables['notes']['entries']['minutes'] = minutes
+
+		minutes_entry = tk.Entry(notes_frame, textvariable=minutes)
+		minutes_entry.grid(row=0, column=1, columnspan=1)
+		self.entries['notes']['minutes'] = minutes_entry
+
+		seconds = tk.IntVar()
+		self.variables['notes']['entries']['seconds'] = seconds
+
+		seconds_entry = tk.Entry(notes_frame, textvariable=seconds)
+		seconds_entry.grid(row=0, column=2, columnspan=1)
+		self.entries['notes']['seconds_entry'] = seconds_entry
+
+	def add_notes_canvas(self):
+		self.variables['notes']['canvas'] = {}
+		self.variables['notes']['canvas']['width'] = self.window_dimentions['width']/4
+		self.variables['notes']['canvas']['height'] = self.window_dimentions['height']/4
+		width = self.variables['notes']['canvas']['width']
+		height = self.variables['notes']['canvas']['height']
+
+		self.canvas = tk.Canvas(self.frames['notes'], width=width, height=height, borderwidth=0, highlightthickness=0)
+		self.canvas.grid(row=0, rowspan=2, column=3, columnspan=1, sticky='nswe')
+		self.draw_notes_circle()
+
+	def draw_notes_circle(self):
+		percent = self.percentage
+		width = self.variables['notes']['canvas']['width']
+		height = self.variables['notes']['canvas']['height']
+		self.create_circle_arc(width/2, height/2, min(width, height)/2, fill="green", outline="#DDD", width=4, start=90, end=(359.0 * percent)+90)
+
+	def add_notes_buttons(self):
+		notes_frame = self.frames['notes']
+		self.buttons['notes'] = {}
+		self.variables['notes']['buttons'] = {}
+
+		start_button = tk.Button(notes_frame, text=PLAY)
+		start_button.bind('<Button-1>', self.handle_start_button)
+		start_button.grid(row=1, column=0, columnspan=1, sticky="we")
+		self.buttons['notes']['start'] = start_button
+
+		pause_button = tk.Button(notes_frame, text=PAUSE)
+		pause_button.bind('<Button-1>', self.handle_pause_button)
+		pause_button.grid(row=1, column=1, columnspan=1, sticky="we")
+		self.buttons['notes']['pause'] = pause_button
+
+		stop_button = tk.Button(notes_frame, text=STOP)
+		stop_button.bind('<Button-1>', self.handle_stop_button)
+		stop_button.grid(row=1, column=2, columnspan=1, sticky="we")
+		self.buttons['notes']['stop'] = stop_button
+
+	def add_notes_text_area(self):
+		notes_frame = self.frames['notes']
+		self.text_areas['notes'] = {}
+
+		text_area = tk.Text(notes_frame, wrap=tk.WORD, width=1, height=12)
+		self.text_areas['notes'] = text_area
+		text_area.grid(row=2, rowspan=1, column=0, columnspan=4, sticky="swe")
+		text_area.focus()
+
+	def get_notes_text(self):
+		# delete and insert are also things
+		return self.text_areas['notes'].get(0)
+
+	def switch_notes_to_break(self):
+		self.remove_notes_window()
+		self.show_break_window()
+
+	def remove_notes_window(self):
+		self.frames['notes'].grid_forget()
+
+################################################################################
+
+	def show_break_window(self):
+		self.current_window = "break"
+		self.timer = False
+		self.percentage = 1.0
+
+		self.set_window_scales(1.0/3)
+		self.resize_window()
+		self.root.title('Break Timer')
+
+		self.frames['break'] = tk.Frame(self.root)
+		self.variables['break'] = {}
+
+		self.frames['break'].rowconfigure(3)
+		self.frames['break'].columnconfigure(6)
+
+		self.add_break_entries()
+		self.add_break_canvas()
+		self.add_break_buttons()
+
+		self.frames['break'].grid(sticky='nswe')
+
+		for row_index in range(2):
+			tk.Grid.rowconfigure(self.frames['break'], row_index, weight=1)
+		for col_index in range(6):
+			tk.Grid.columnconfigure(self.frames['break'], col_index, weight=1, minsize=self.window_dimentions['width']/6)
+
+	def add_break_canvas(self):
+		self.variables['break']['canvas'] = {}
+		self.variables['break']['canvas']['width'] = self.window_dimentions['width']
+		self.variables['break']['canvas']['height'] = self.window_dimentions['height'] - self.entries['break']['hours'].winfo_reqheight()
+		width = self.variables['break']['canvas']['width']
+		height = self.variables['break']['canvas']['height']
+
+		self.canvas = tk.Canvas(self.frames['break'], width=width, height=height, borderwidth=0, highlightthickness=0)
+		self.canvas.grid(row=2, columnspan=6, sticky='swe')
+		self.draw_break_circle()
+
+	def draw_break_circle(self):
+		percent = self.percentage
+		width = self.variables['break']['canvas']['width']
+		height = self.variables['break']['canvas']['height']
+		self.create_circle_arc(width/2, height/2, min(width, height)/2, fill="blue", outline="#DDD", width=4, start=90, end=(359.0 * percent)+90)
+
+	def add_break_entries(self):
+		break_frame = self.frames['break']
+		self.entries['break'] = {}
+		self.variables['break']['entries'] = {}
+
+		hours = tk.IntVar()
+		self.variables['break']['entries']['hours'] = hours
+
+		hours_entry = tk.Entry(break_frame, textvariable=hours)
+		hours_entry.grid(row=0, column=0, columnspan=1)
+		self.entries['break']['hours'] = hours_entry
+
+		minutes = tk.IntVar()
+		minutes.set(5)
+		self.variables['break']['entries']['minutes'] = minutes
+
+		minutes_entry = tk.Entry(break_frame, textvariable=minutes)
+		minutes_entry.grid(row=0, column=1, columnspan=1)
+		self.entries['break']['minutes'] = minutes_entry
+
+		seconds = tk.IntVar()
+		self.variables['break']['entries']['seconds'] = seconds
+
+		seconds_entry = tk.Entry(break_frame, textvariable=seconds)
+		seconds_entry.grid(row=0, column=2, columnspan=1)
+		self.entries['break']['seconds_entry'] = seconds_entry
+
+	def add_break_buttons(self):
+		break_frame = self.frames['break']
+		self.buttons['break'] = {}
+		self.variables['break']['buttons'] = {}
+
+		start_button = tk.Button(break_frame, text=PLAY)
+		start_button.bind('<Button-1>', self.handle_start_button)
+		start_button.grid(row=0, column=3, columnspan=1, sticky="we")
+		self.buttons['break']['start'] = start_button
+
+		pause_button = tk.Button(break_frame, text=PAUSE)
+		pause_button.bind('<Button-1>', self.handle_pause_button)
+		pause_button.grid(row=0, column=4, columnspan=1, sticky="we")
+		self.buttons['break']['pause'] = pause_button
+
+		stop_button = tk.Button(break_frame, text=STOP)
+		stop_button.bind('<Button-1>', self.handle_stop_button)
+		stop_button.grid(row=0, column=5, columnspan=1, sticky="we")
+		self.buttons['break']['stop'] = stop_button
+
+	def switch_break_to_task(self):
+		self.remove_break_window()
+		self.show_task_window()
+
+	def remove_break_window(self):
+		self.frames['break'].grid_forget()
 
 if __name__ == "__main__":
 	PomodoroGUI()
