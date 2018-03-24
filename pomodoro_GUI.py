@@ -14,6 +14,7 @@ class PomodoroGUI():
 		self.sound = SoundPlayer("./time.wav")
 
 		self.root = tk.Tk()
+		self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
 		tk.Grid.rowconfigure(self.root, 0, weight=1)
 		tk.Grid.columnconfigure(self.root, 0, weight=1)
@@ -34,6 +35,11 @@ class PomodoroGUI():
 		self.root.resizable(width=False, height=False)
 		self.focus()
 		self.root.mainloop()
+
+	def quit(self):
+		if self.timer:
+			self.timer.kill()
+		self.root.destroy()
 
 	def create_circle(self, x, y, r, **kwargs):
 		return self.canvas.create_oval(x-r, y-r, x+r, y+r, **kwargs)
@@ -140,7 +146,6 @@ class PomodoroGUI():
 		self.timer.pause()
 
 	def update_timer(self):
-		# PUT THINGS HERE!
 		if self.timer_active:
 			self.percentage = self.timer.seconds_left()/self.timer.seconds_duration
 			self.canvas.delete("all")
@@ -291,8 +296,9 @@ class PomodoroGUI():
 		self.buttons['task']['stop'] = stop_button
 
 	def handle_start_button(self, *other_arguments):
+		self.root.focus()
 		if self.timer_active == False:
-			self.start_timer()
+			self.root.after(10, self.start_timer)
 
 	def handle_pause_button(self, *other_arguments):
 		self.stop_timer()

@@ -21,6 +21,8 @@ class TaskTimer():
 		self.is_paused = False
 		self.pause_time = 0
 
+		self.killed = False
+
 		self.start_time = time.time()
 		self.end_time = self.start_time + self.seconds_duration
 
@@ -46,6 +48,9 @@ class TaskTimer():
 	def watch_timer(self):
 		sleep_time = 0.05
 		while not self.is_done():
+			if self.killed:
+				return
+
 			if self.is_paused:
 				self.pause_time += sleep_time
 
@@ -65,6 +70,9 @@ class TaskTimer():
 			"minutes": int(self.minutes_left() % 60),
 			"seconds": int(self.seconds_left() % 60)
 		}
+
+	def kill(self):
+		self.killed = True
 
 class TaskInfoWriter():
 	def __init__(self):
