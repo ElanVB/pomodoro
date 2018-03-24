@@ -56,10 +56,13 @@ class PomodoroGUI():
 		window_scale = self.screen_dimentions['window_scale']
 		window_offset_scale = self.screen_dimentions['window_offset_scale']
 
-		window_width = int(screen_width * window_scale)
+		window_width = int(screen_height * window_scale)
+		# window_width = int(screen_width * window_scale)
 		window_height = int(screen_height * window_scale)
-		x_offset = int(screen_width * window_offset_scale)
-		y_offset = int(screen_height * window_offset_scale)
+		x_offset = int(screen_width - window_width)
+		# x_offset = int(screen_width * window_offset_scale)
+		y_offset = int(0)
+		# y_offset = int(screen_height * window_offset_scale)
 
 		self.root.geometry("%dx%d+%d+%d" %
 			(window_width, window_height, x_offset, y_offset))
