@@ -1,5 +1,5 @@
 import tkinter as tk
-from pomodoro import TaskTimer, SoundPlayer
+from pomodoro import TaskTimer, SoundPlayer, TaskInfoWriter
 
 PLAY = "\N{Black Right-pointing Triangle}"
 PAUSE = "\N{Double Vertical Line}"
@@ -10,6 +10,7 @@ NICE_STOP = "\N{Black Square For Stop}"
 
 class PomodoroGUI():
 	def __init__(self):
+		self.writer = TaskInfoWriter()
 		self.sound = SoundPlayer("./time.wav")
 
 		self.root = tk.Tk()
@@ -82,6 +83,8 @@ class PomodoroGUI():
 			if self.current_window == "task":
 				for entry in self.entries["task"].values():
 					entry.config(state="disabled")
+
+				self.writer.start_task(self.variables["task"]["entries"]["name"].get())
 
 				self.timer = TaskTimer({
 					"hours": self.variables["task"]["entries"]["hours"].get(),
@@ -162,6 +165,16 @@ class PomodoroGUI():
 
 			self.root.after(50, self.update_timer)
 
+	def entry_validate(self, event):
+		entry = event.widget
+		if entry == self.entries["task"]["name"]:
+			if entry.get() == "":
+				entry.insert(0, "Enter a title for this task...")
+				entry.config(fg = "grey")
+		else:
+			if entry.get() == "":
+				entry.insert(0, "0")
+
 ################################################################################
 
 	def show_task_window(self):
@@ -215,9 +228,13 @@ class PomodoroGUI():
 		self.variables['task']['entries'] = {}
 
 		task_name = tk.StringVar()
+		task_name.set("Enter a title for this task...")
 		self.variables['task']['entries']['name'] = task_name
 
 		name_entry = tk.Entry(task_frame, textvariable=task_name)
+		name_entry.config(fg = "grey")
+		name_entry.bind("<FocusIn>", self.empty_name_entry)
+		name_entry.bind("<FocusOut>", self.entry_validate)
 		name_entry.grid(row=0, columnspan=6, sticky='we')
 		self.entries['task']['name'] = name_entry
 
@@ -225,6 +242,7 @@ class PomodoroGUI():
 		self.variables['task']['entries']['hours'] = hours
 
 		hours_entry = tk.Entry(task_frame, textvariable=hours)
+		hours_entry.bind("<FocusOut>", self.entry_validate)
 		hours_entry.grid(row=1, column=0, columnspan=1)
 		self.entries['task']['hours'] = hours_entry
 
@@ -233,6 +251,7 @@ class PomodoroGUI():
 		self.variables['task']['entries']['minutes'] = minutes
 
 		minutes_entry = tk.Entry(task_frame, textvariable=minutes)
+		minutes_entry.bind("<FocusOut>", self.entry_validate)
 		minutes_entry.grid(row=1, column=1, columnspan=1)
 		self.entries['task']['minutes'] = minutes_entry
 
@@ -240,8 +259,16 @@ class PomodoroGUI():
 		self.variables['task']['entries']['seconds'] = seconds
 
 		seconds_entry = tk.Entry(task_frame, textvariable=seconds)
+		seconds_entry.bind("<FocusOut>", self.entry_validate)
 		seconds_entry.grid(row=1, column=2, columnspan=1)
 		self.entries['task']['seconds_entry'] = seconds_entry
+
+	def empty_name_entry(self, *other_arguments):
+		entry = self.entries['task']['name']
+		if entry.get() == 'Enter a title for this task...':
+			entry.delete(0, "end") # delete all the text in the entry
+			entry.insert(0, '') #Insert blank for user input
+			entry.config(fg = 'black')
 
 	def add_task_buttons(self):
 		task_frame = self.frames['task']
@@ -266,12 +293,9 @@ class PomodoroGUI():
 	def handle_start_button(self, *other_arguments):
 		if self.timer_active == False:
 			self.start_timer()
-			# actually start the timer here
-			# disable entries here
 
 	def handle_pause_button(self, *other_arguments):
 		self.stop_timer()
-		# actually pause the timer here
 
 	def handle_stop_button(self, *other_arguments):
 		self.timer_active = True
@@ -282,11 +306,10 @@ class PomodoroGUI():
 		if self.current_window == "task":
 			self.switch_task_to_notes()
 		elif self.current_window == "notes":
+			self.writer.write_notes(self.text_areas["notes"].get("1.0", "end-1c"))
 			self.switch_notes_to_break()
 		elif self.current_window == "break":
 			self.switch_break_to_task()
-		# actually stop the timer here and bring notes screen up
-		# (or that will happen as a result of the timer ending)
 
 	def switch_task_to_notes(self):
 		self.remove_task_window()
@@ -336,6 +359,7 @@ class PomodoroGUI():
 		self.variables['notes']['entries']['hours'] = hours
 
 		hours_entry = tk.Entry(notes_frame, textvariable=hours)
+		hours_entry.bind("<FocusOut>", self.entry_validate)
 		hours_entry.grid(row=0, column=0, columnspan=1)
 		self.entries['notes']['hours'] = hours_entry
 
@@ -344,6 +368,7 @@ class PomodoroGUI():
 		self.variables['notes']['entries']['minutes'] = minutes
 
 		minutes_entry = tk.Entry(notes_frame, textvariable=minutes)
+		minutes_entry.bind("<FocusOut>", self.entry_validate)
 		minutes_entry.grid(row=0, column=1, columnspan=1)
 		self.entries['notes']['minutes'] = minutes_entry
 
@@ -351,6 +376,7 @@ class PomodoroGUI():
 		self.variables['notes']['entries']['seconds'] = seconds
 
 		seconds_entry = tk.Entry(notes_frame, textvariable=seconds)
+		seconds_entry.bind("<FocusOut>", self.entry_validate)
 		seconds_entry.grid(row=0, column=2, columnspan=1)
 		self.entries['notes']['seconds_entry'] = seconds_entry
 
@@ -400,9 +426,9 @@ class PomodoroGUI():
 		text_area.grid(row=2, rowspan=1, column=0, columnspan=4, sticky="swe")
 		text_area.focus()
 
-	def get_notes_text(self):
-		# delete and insert are also things
-		return self.text_areas['notes'].get(0)
+	# def get_notes_text(self):
+	# 	# delete and insert are also things
+	# 	return self.text_areas['notes'].get("1.0", "end-1rc")
 
 	def switch_notes_to_break(self):
 		self.remove_notes_window()
@@ -466,6 +492,7 @@ class PomodoroGUI():
 		self.variables['break']['entries']['hours'] = hours
 
 		hours_entry = tk.Entry(break_frame, textvariable=hours)
+		hours_entry.bind("<FocusOut>", self.entry_validate)
 		hours_entry.grid(row=0, column=0, columnspan=1)
 		self.entries['break']['hours'] = hours_entry
 
@@ -474,6 +501,7 @@ class PomodoroGUI():
 		self.variables['break']['entries']['minutes'] = minutes
 
 		minutes_entry = tk.Entry(break_frame, textvariable=minutes)
+		minutes_entry.bind("<FocusOut>", self.entry_validate)
 		minutes_entry.grid(row=0, column=1, columnspan=1)
 		self.entries['break']['minutes'] = minutes_entry
 
@@ -481,6 +509,7 @@ class PomodoroGUI():
 		self.variables['break']['entries']['seconds'] = seconds
 
 		seconds_entry = tk.Entry(break_frame, textvariable=seconds)
+		seconds_entry.bind("<FocusOut>", self.entry_validate)
 		seconds_entry.grid(row=0, column=2, columnspan=1)
 		self.entries['break']['seconds_entry'] = seconds_entry
 
