@@ -15,6 +15,8 @@ class PomodoroGUI():
 		else:
 			self.writer = TaskInfoWriter(logs_dir)
 
+		self.timer = None
+
 		self.sound = SoundPlayer("./time.wav")
 
 		self.root = tk.Tk()
@@ -312,6 +314,9 @@ class PomodoroGUI():
 		self.percentage = 1.0
 		self.update_timer()
 		self.stop_timer()
+
+		if self.timer:
+			self.timer.kill()
 
 		if self.current_window == "task":
 			self.switch_task_to_notes()
