@@ -52,7 +52,9 @@ class TaskTimer():
 				return
 
 			if self.is_paused:
-				self.pause_time += sleep_time
+				current_time = time.time()
+				self.pause_time += current_time - self.prev_pause_time
+				self.prev_pause_time = current_time
 
 			time.sleep(sleep_time)
 
@@ -60,6 +62,7 @@ class TaskTimer():
 
 	def pause(self):
 		self.is_paused = True
+		self.prev_pause_time = time.time()
 
 	def start(self):
 		self.is_paused = False
